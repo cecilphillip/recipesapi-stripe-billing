@@ -1,0 +1,22 @@
+version: '3.0'
+
+env: 
+  API_HTTPS_URL: 'https://localhost:7052'  
+
+tasks:
+  default:
+    desc: Default task
+    cmds:
+      - echo ${API_HTTPS_URL} ${ACCESS_TOKEN} 
+
+  requests:authenticate:
+    desc: Get and set access token 
+    cmds:
+      - source .tasks/requests.sh authenticate
+  
+  requests:generate:
+    desc: Generate requests    
+    env:
+      ITERATIONS: 10
+    cmds:     
+      - source .tasks/requests.sh generate

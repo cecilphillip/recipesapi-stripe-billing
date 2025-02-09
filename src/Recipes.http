@@ -1,0 +1,43 @@
+### List all users
+GET https://localhost:7052/auth/list/users
+
+### Get auth token 
+POST https://localhost:7052/connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&username=james@test.com&password=test
+
+### Get recipe by lookup code
+GET https://localhost:7052/api/Recipes/oops
+Authorization: Bearer 
+
+### Get random recipe
+GET https://localhost:7052/api/Recipes/random
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IkExM0QwMTA1ODA3QUNENDcxNTE2OUIwMjc2ODM4NDk3NzcxODYyMDQiLCJ4NXQiOiJvVDBCQllCNnpVY1ZGcHNDZG9PRWwzY1lZZ1EiLCJ0eXAiOiJhdCtqd3QifQ.eyJpc3MiOiJodHRwczovL2xvY2FsaG9zdDo3MDUyLyIsImV4cCI6MTczOTA2ODI5MCwiaWF0IjoxNzM5MDY0NjkwLCJqdGkiOiI5ZDk1OTA1Yy0yNGZiLTQzOGItYjU5MC1jOWIxYmVlYzQzOTYiLCJzdWIiOiJkOTViMzVmOS0wNDhlLTRlODYtOWVjNi05ZDMxM2VkMDY2YjgiLCJlbWFpbCI6ImphbWVzQHRlc3QuY29tIiwibmFtZSI6ImphbWVzQHRlc3QuY29tIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiamFtZXNAdGVzdC5jb20iLCJzdHJpcGUuY3VzdG9tZXIuaWQiOiJjdXNfUmk2WnYxY1BRdjBaRjMiLCJyZWNpcGUuYWNjZXNzIjoid3JpdGUiLCJvaV90a25faWQiOiI2ZmI0OTMwYS1iMDYzLTQ2OGUtODg2YS1iOTY2OTc3YjM4NGQifQ.BjVhaKzYFbbpwfOQtxZPTSaQTWt-I7gb9eqKCZPar3x6QLhG2Bj9c3RxnhpGllqM37li6SNnYOSQu_W5SfDIoxwy0LtNdGFSQtkdXpDjrzD2-YOEENCB2Zf1PiQPq2U2wDDgQp5FNezrx4-G0Vcb3xdIS8STb3r4y10chrvmR0nVWekG0YcXP_yeAwnJPaDuBbft8Uu1JG6u_Sg7a7hA0yDDBNli4oOinWLATSlO2HOaVFQWoXmAn4Twmt2WJME9ka83Xn-BeVX2rexN28x5gSghtdtnfMfodqhzd_bOEo2aPMD7IM0eV7F_0ezpy2QvRpEC5NMiFTji-ohnwwItlw
+
+
+###
+POST https://localhost:7052/api/Recipes
+Authorization: Bearer 
+Content-Type: application/json
+
+{}
+
+###
+POST https://localhost:7052/api/Recipes
+Authorization: Bearer 
+Content-Type: application/json
+
+{
+  "name": "oops",
+  "description": "oops",
+  "lookupCode": "oops",
+  "tags": ["oops"],
+  "ingredients": [
+    {
+      "name": "oops",
+      "quantity" : 1,
+      "unit": "oops"
+    }
+  ]
+}
