@@ -7,7 +7,7 @@ tasks:
   default:
     desc: Default task
     cmds:
-      - echo ${API_HTTPS_URL} ${ACCESS_TOKEN} 
+      - echo "API base address ${API_HTTPS_URL}"  
 
   requests:authenticate:
     desc: Get and set access token 

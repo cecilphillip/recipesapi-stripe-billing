@@ -20,7 +20,7 @@ public class RecipesController(RecipeDbContext dbContext, IValidator<RecipeApiMo
     [EndpointName(nameof(GetRecipeByLookUp))]
     [EndpointSummary("Retrieves a recipe by its lookup code.")]
     [EndpointDescription("This endpoint retrieves a recipe by its lookup code. If not found, a 404 is returned.")]
-    [HttpGet("{lookup}")]
+    [HttpGet("code/{lookup}")]
     public async Task<ActionResult> GetRecipeByLookUp(string lookup)
     {
         try
@@ -162,7 +162,7 @@ public class RecipesController(RecipeDbContext dbContext, IValidator<RecipeApiMo
     [EndpointSummary("Delete a recipe.")]
     [EndpointDescription(
         "This endpoint deletes a recipe associated with the provided lookup code. If the recipe is not found, a 404 is returned.")]
-    [HttpDelete("{lookup}")]
+    [HttpDelete("code/{lookup}")]
     public async Task<ActionResult> DeleteRecipe(string lookup)
     {
         try
