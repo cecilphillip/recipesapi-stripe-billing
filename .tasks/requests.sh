@@ -14,7 +14,7 @@ function authenticate() {
       access_token=$(echo $response | jq -r '.access_token')
       if [ "$access_token" != "null" ]; then
         #echo "${YELLOW}Access token retrieved:${RESET} $access_token"
-        echo "${YELLOW}Access token retrieved:${RESET}"
+        echo "${YELLOW}Access token retrieved${RESET}"
         export API_ACCESS_TOKEN=$access_token        
       else
         echo "Failed to retrieve access token"
