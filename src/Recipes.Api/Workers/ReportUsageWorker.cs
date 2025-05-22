@@ -5,7 +5,7 @@ using Stripe.Billing;
 
 namespace Recipes.Api.Workers;
 
-public class ReportUsageWorker(Channel<ApiUsageReport> apiUsageChannel, IStripeClient stripeClient): BackgroundService
+public class ReportUsageWorker(Channel<ApiUsageReport> apiUsageChannel, IServiceProvider provider): BackgroundService
 {
     private const int BatchSize = 10;
     private readonly ConcurrentBag<ApiUsageReport> _reportedUsage = new();
@@ -42,8 +42,11 @@ public class ReportUsageWorker(Channel<ApiUsageReport> apiUsageChannel, IStripeC
                     { ApiConstants.ReportUsageEventValue, usageReport.Usage.ToString() },
                 },
             };
-            var meterEventService = new MeterEventService(stripeClient);
-            await meterEventService.CreateAsync(options);
+            
+            var scope = provider.CreateScope();
+            var stripeClient =  scope.ServiceProvider.GetRequiredService<StripeClient>();
+            
+            await stripeClient.V1.Billing.MeterEvents.CreateAsync(options);
         }
         _reportedUsage.Clear();
     }

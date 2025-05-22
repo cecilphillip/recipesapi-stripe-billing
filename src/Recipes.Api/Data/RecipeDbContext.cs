@@ -23,7 +23,7 @@ public class RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             m.Property(p => p.Description).HasMaxLength(512);
             m.Property(p => p.LookupCode).HasMaxLength(32);
             m.Property(e => e.DateCreated).HasDefaultValueSql("now() at time zone 'utc'");
-            m .OwnsMany(p => p.Ingredients, o =>
+            m.OwnsMany(p => p.Ingredients, o =>
             {
                 o.ToTable("Ingredients");
                 o.Property(p => p.Name).HasMaxLength(128);
