@@ -6,29 +6,7 @@ using Stripe;
 namespace Recipes.Api;
 
 public static class Extensions
-{
-    public static IServiceCollection AddStripe(this IServiceCollection services,
-        IConfiguration config) {
-        StripeConfiguration.ApiKey = config.GetValue<string>("Stripe:SecretKey");
-
-        var appInfo = new AppInfo { Name = "ShadowShop", Version = "0.1.0" };
-        StripeConfiguration.AppInfo = appInfo;
-
-        services.AddHttpClient("Stripe");
-        services.AddTransient<IStripeClient, StripeClient>(s => {
-            var clientFactory = s.GetRequiredService<IHttpClientFactory>();
-            var httpClient = new SystemNetHttpClient(
-                httpClient: clientFactory.CreateClient("Stripe"),
-                maxNetworkRetries: StripeConfiguration.MaxNetworkRetries,
-                appInfo: appInfo,
-                enableTelemetry: StripeConfiguration.EnableTelemetry);
-
-            return new StripeClient(apiKey: StripeConfiguration.ApiKey, httpClient: httpClient);
-        });
-
-        return services;
-    }
-    
+{  
     public static RecipeApiModel ToApiModel(this RecipeDataModel dataModel) => new()
     {
         Name = dataModel.Name,

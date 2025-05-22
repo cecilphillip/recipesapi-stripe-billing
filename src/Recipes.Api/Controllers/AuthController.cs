@@ -17,7 +17,7 @@ namespace Recipes.Api.Controllers;
 [Route("[controller]")]
 [ApiExplorerSettings(IgnoreApi = true)]
 [ApiController]
-public class AuthController(UserManager<RecipeApiUserDataModel> userManager, IStripeClient stripeClient, ILogger<AuthController> logger) : ControllerBase
+public class AuthController(UserManager<RecipeApiUserDataModel> userManager, StripeClient stripeClient, ILogger<AuthController> logger) : ControllerBase
 {
     private readonly Faker _faker = new("en_US");
     private readonly CustomerService _customerService = new(stripeClient);

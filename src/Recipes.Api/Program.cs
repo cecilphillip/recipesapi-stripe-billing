@@ -102,8 +102,9 @@ builder.Services.AddControllers(options =>
         //options.SuppressModelStateInvalidFilter = true;
         //options.SuppressMapClientErrors = false;
     });
+
 builder.Services.AddScoped<ReportApiUsageFilter>();
-builder.Services.AddStripe(builder.Configuration);
+builder.Services.AddStripe();
 
 builder.Services.AddTransient<Seeder>();
 builder.Services.AddHostedService<BootstrapWorker>();
@@ -129,6 +130,8 @@ app.MapScalarApiReference(options =>
     options.WithTitle("Recipes API")
         .WithOpenApiRoutePattern("/openapi/{documentName}/spec.json");
 });
+
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
