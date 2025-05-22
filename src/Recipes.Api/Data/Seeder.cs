@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Recipes.Api.Models;
 using Stripe;
 using Stripe.Billing;
+using Stripe.TestHelpers;
 using File = System.IO.File;
 
 namespace Recipes.Api.Data;
@@ -15,10 +16,9 @@ namespace Recipes.Api.Data;
 public class Seeder(
     UserManager<RecipeApiUserDataModel> userManager,
     RecipeDbContext dbContext,
-    IStripeClient stripeClient)
+    StripeClient stripeClient)
 {
     private readonly Faker _faker = new("en_US");
-    private readonly CustomerService _customerService = new(stripeClient);
 
     public async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -29,8 +29,6 @@ public class Seeder(
     private async Task EnsureDatabaseAsync(CancellationToken cancellationToken)
     {
         var dbCreator = dbContext.GetService<IRelationalDatabaseCreator>();
-        //TODO: Use polly instead of the execution strategy??
-
         if (!await dbCreator.ExistsAsync(cancellationToken))
         {
             await dbCreator.CreateAsync(cancellationToken);
@@ -41,19 +39,19 @@ public class Seeder(
 
     private async Task SeedDataAsync(CancellationToken cancellationToken)
     {
-        if (!dbContext.Users.Any())
-        {
-            await CreateUsersAsync(cancellationToken);
-        }
-
         if (!dbContext.Recipes.Any())
         {
             await CreateRecipesAsync(cancellationToken);
         }
-
+        
         if (!await AnyExistingProductsAsync(cancellationToken))
         {
-            await CreateProductTiersAsync(cancellationToken);
+          await CreateProductAsync(cancellationToken);
+        }
+
+        if (!dbContext.Users.Any())
+        {
+            await CreateUsersAsync(cancellationToken);
         }
     }
 
@@ -61,22 +59,23 @@ public class Seeder(
     private async Task<bool> AnyExistingProductsAsync(CancellationToken cancelToken)
     {
         var listOptions = new ProductListOptions { Active = true, Limit = 1 };
-        var productService = new ProductService(stripeClient);
 
-        var existingProducts = await productService.ListAsync(listOptions, cancellationToken: cancelToken);
+
+        var existingProducts = await stripeClient.V1.Products.ListAsync(listOptions, cancellationToken: cancelToken);
         return existingProducts.Any();
     }
-    
+
     private async Task<Meter?> GetExistingMeterAsync(CancellationToken cancelToken)
     {
         var listOptions = new MeterListOptions() { Limit = 5 };
-        var meterService = new MeterService(stripeClient);
 
-        var existingMeters = await meterService.ListAsync(listOptions, cancellationToken: cancelToken);
+
+        var existingMeters =
+            await stripeClient.V1.Billing.Meters.ListAsync(listOptions, cancellationToken: cancelToken);
 
         foreach (var meter in existingMeters)
         {
-            if(meter.EventName == ApiConstants.ReportUsageEventName)
+            if (meter.EventName == ApiConstants.ReportUsageEventName)
             {
                 return meter;
             }
@@ -85,10 +84,8 @@ public class Seeder(
         return null;
     }
 
-    private async Task CreateProductTiersAsync(CancellationToken cancellationToken)
+    private async Task CreateProductAsync(CancellationToken cancellationToken)
     {
-        //TODO: check for errors
-
         // Create Standard Tier Product
         var productTierOptions = new ProductCreateOptions
         {
@@ -96,9 +93,9 @@ public class Seeder(
             Description = "Standard Tier Recipes API access",
             UnitLabel = "API Calls"
         };
-        var productService = new ProductService(stripeClient);
+
         var standardTierProduct =
-            await productService.CreateAsync(productTierOptions, cancellationToken: cancellationToken);
+            await stripeClient.V1.Products.CreateAsync(productTierOptions, cancellationToken: cancellationToken);
 
         // Create Standard tier price
         var standardTierPriceOptions = new PriceCreateOptions
@@ -110,12 +107,12 @@ public class Seeder(
             BillingScheme = "per_unit",
             Recurring = new PriceRecurringOptions { UsageType = "licensed", Interval = "month" },
         };
-        var priceService = new PriceService();
-        await priceService.CreateAsync(standardTierPriceOptions, cancellationToken: cancellationToken);
 
-        //TODO: Create meter
+        await stripeClient.V1.Prices.CreateAsync(standardTierPriceOptions, cancellationToken: cancellationToken);
+
+        //Create billing meter if it doesn't exist
         var meter = await GetExistingMeterAsync(cancellationToken);
-        
+
         if (meter is null)
         {
             var meterCreateOptions = new MeterCreateOptions
@@ -130,9 +127,8 @@ public class Seeder(
                     EventPayloadKey = "stripe_customer_id",
                 },
             };
-        
-            var meterService = new MeterService(stripeClient);
-             meter = await meterService.CreateAsync(meterCreateOptions, cancellationToken: cancellationToken);
+            meter = await stripeClient.V1.Billing.Meters.CreateAsync(meterCreateOptions,
+                cancellationToken: cancellationToken);
         }
 
         // Create Standard tier metered price
@@ -156,7 +152,7 @@ public class Seeder(
             ],
         };
 
-        await priceService.CreateAsync(standardTierMeteredPrice, cancellationToken: cancellationToken);
+        await stripeClient.V1.Prices.CreateAsync(standardTierMeteredPrice, cancellationToken: cancellationToken);
     }
 
     private async Task CreateRecipesAsync(CancellationToken cancellationToken)
@@ -173,13 +169,12 @@ public class Seeder(
             {
                 Name = jsonRecipe.GetProperty("title").GetString() ?? "No Title",
                 Description = jsonRecipe.GetProperty("description").GetString() ?? "No Description",
-                LookupCode = lookupCodeGenerator.Replace("REC-???*****")
+                LookupCode = lookupCodeGenerator.Replace("REC-???*****"),
+                Tags = jsonRecipe.GetProperty("tags").EnumerateArray()
+                    .Select(rt => rt.GetString())
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .ToArray()!
             };
-
-            recipe.Tags = jsonRecipe.GetProperty("tags").EnumerateArray()
-                .Select(rt => rt.GetString())
-                .Where(t => !string.IsNullOrWhiteSpace(t))
-                .ToArray()!;
 
             foreach (var jsonIngredient in jsonRecipe.GetProperty("ingredients").EnumerateArray())
             {
@@ -201,12 +196,14 @@ public class Seeder(
     private async Task CreateUsersAsync(CancellationToken cancellationToken)
     {
         await CreateUserAsync("James Moriarty", "james@test.com", false, cancellationToken);
-        await CreateUserAsync("Victor Von Doom", "victor@test.com", false, cancellationToken);
-        await CreateUserAsync("Dorian Gray", "dorian@test.com", false, cancellationToken);
+        await CreateUserAsync("Victor Von Doom", "victor@test.com", false,  cancellationToken);
+        await CreateUserAsync("Dorian Gray", "dorian@test.com", false,  cancellationToken);
     }
+
 
     private async Task CreateUserAsync(string name, string email, bool admin, CancellationToken cancellationToken)
     {
+        // Set customer options
         var ccOptions = new CustomerCreateOptions
         {
             Name = name,
@@ -224,7 +221,19 @@ public class Seeder(
                 new CustomerInvoiceSettingsOptions { DefaultPaymentMethod = "pm_card_visa" }
         };
 
-        var newCustomer = await _customerService.CreateAsync(ccOptions, cancellationToken: cancellationToken);
+       
+            // Create test clock
+            var tcCreateOptions = new TestClockCreateOptions
+            {
+                Name = $"Subscription Clock ({name})", FrozenTime = DateTimeOffset.UtcNow.DateTime
+            };
+
+            var newTestClock = await stripeClient.V1.TestHelpers.TestClocks.CreateAsync(tcCreateOptions, cancellationToken: cancellationToken);
+            ccOptions.TestClock = newTestClock.Id;
+        
+
+        // Create Stripe customer
+        var newCustomer = await stripeClient.V1.Customers.CreateAsync(ccOptions, cancellationToken: cancellationToken);
 
         var newUser = new RecipeApiUserDataModel
         {
@@ -234,6 +243,7 @@ public class Seeder(
             StripeCustomerId = newCustomer.Id
         };
 
+        // Add user to the identity store
         await userManager.CreateAsync(newUser, "test");
         await userManager.AddClaimAsync(newUser, new Claim("recipe.access", admin ? "admin" : "write"));
 
@@ -242,6 +252,23 @@ public class Seeder(
             Metadata = new() { [ApiConstants.StripeCustomerMetaIdKey] = newUser.Id }
         };
 
-        await _customerService.UpdateAsync(newCustomer.Id, cuOptions, cancellationToken: cancellationToken);
+        await stripeClient.V1.Customers.UpdateAsync(newCustomer.Id, cuOptions, cancellationToken: cancellationToken);
+        
+        // There is only one product in the test account, so we can just get the prices for it
+        var plOptions = new PriceListOptions {
+            Limit = 2,Active = true,
+        };
+      
+        var prices = await stripeClient.V1.Prices.ListAsync(plOptions, cancellationToken: cancellationToken);
+        var lineItems = prices.Select(p => new SubscriptionItemOptions {
+            Price = p.Id, Quantity = !p.BillingScheme.Equals("tiered") ? 1 : null
+        }).ToList();
+        
+        // Create a new subscription for the customer (replace with your price ID)
+        var subscription = await stripeClient.V1.Subscriptions.CreateAsync(new SubscriptionCreateOptions
+        {
+            Customer = newCustomer.Id,
+            Items = lineItems
+        }, cancellationToken: cancellationToken);
     }
 }
