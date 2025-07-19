@@ -9,15 +9,15 @@ public class ReportUsageWorker(Channel<ApiUsageReport> apiUsageChannel, IService
 {
     private const int BatchSize = 10;
     private readonly ConcurrentBag<ApiUsageReport> _reportedUsage = new();
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (await apiUsageChannel.Reader.WaitToReadAsync(stoppingToken))
         {
             var report = await apiUsageChannel.Reader.ReadAsync(stoppingToken);
-            
+
             _reportedUsage.Add(report);
-            
+
             if (_reportedUsage.Count >= BatchSize)
             {
                 await ReportUsageBatch();
@@ -42,10 +42,10 @@ public class ReportUsageWorker(Channel<ApiUsageReport> apiUsageChannel, IService
                     { ApiConstants.ReportUsageEventValue, usageReport.Usage.ToString() },
                 },
             };
-            
+
             var scope = provider.CreateScope();
-            var stripeClient =  scope.ServiceProvider.GetRequiredService<StripeClient>();
-            
+            var stripeClient = scope.ServiceProvider.GetRequiredService<StripeClient>();
+
             await stripeClient.V1.Billing.MeterEvents.CreateAsync(options);
         }
         _reportedUsage.Clear();

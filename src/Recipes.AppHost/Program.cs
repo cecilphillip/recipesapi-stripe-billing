@@ -21,5 +21,4 @@ builder.AddProject<Projects.Recipes_Api>("recipes-api")
     .WaitFor(redis)
     .WithReference(redis);
 
-
 builder.Build().Run();
