@@ -16,7 +16,8 @@ namespace Recipes.Api.Data;
 public class Seeder(
     UserManager<RecipeApiUserDataModel> userManager,
     RecipeDbContext dbContext,
-    StripeClient stripeClient)
+    StripeClient stripeClient,
+    ILogger<Seeder> logger) 
 {
     private readonly Faker _faker = new("en_US");
 
@@ -190,7 +191,7 @@ public class Seeder(
             dbContext.Recipes.Add(recipe);
         }
 
-        var result = await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task CreateUsersAsync(CancellationToken cancellationToken)
@@ -265,7 +266,7 @@ public class Seeder(
         }).ToList();
         
         // Create a new subscription for the customer (replace with your price ID)
-        var subscription = await stripeClient.V1.Subscriptions.CreateAsync(new SubscriptionCreateOptions
+        await stripeClient.V1.Subscriptions.CreateAsync(new SubscriptionCreateOptions
         {
             Customer = newCustomer.Id,
             Items = lineItems
